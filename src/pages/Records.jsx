@@ -79,23 +79,35 @@ function Records() {
   }
   const handleAddRecord = async (formData) => {
     try {
-      //TODO: make add new record functional
+      setIsLoading(true);
+      const response = await api.post('plants', formData);
+      const newRecord = response.data;
+      
+      setRecords(prev => [newRecord, ...prev]);
       toast.success("New record saved.");
     } catch (error) {
       console.error(error);
       toast.error("Error encountered while saving record.");
+    } finally {
+      setIsLoading(false);
+      setIsModalOpen(false);
     }
-
-    setIsModalOpen(false)
   }
   const handleUpdateRecord = async (data) => {
     try {
-      //TODO make update record functional
+      setIsLoading(true);
+      const response = await api.put(`plants/${data.id}`, data);
+      const updatedRecord = response.data;
+      
+      setRecords(prev => prev.map(record => 
+        record.id === data.id ? updatedRecord : record
+      ));
       toast.success("Plant data updated.");
     } catch (error) {
       console.error(error);
       toast.error("Error encountered during update.");
     } finally {
+      setIsLoading(false);
       setIsEditRecord(false);
     }
   }
@@ -103,13 +115,16 @@ function Records() {
     try {
       const isDelete = confirm("Are you sure you want to delete this record?");
       if (isDelete) {
-        await api.delete(`plants/${data.id}`, data);
-        setRecords(prev => prev?.filter( val => data.id !== val.id))
+        setIsLoading(true);
+        await api.delete(`plants/${data.id}`);
+        setRecords(prev => prev?.filter(val => data.id !== val.id))
         toast.success("Plant data deleted.");
       }
     } catch (error) {
       console.error(error)
       toast.error("Error encountered while deleting record.");
+    } finally {
+      setIsLoading(false);
     }
   }
   const loadMore = useCallback(() => {
