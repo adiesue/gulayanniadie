@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { FaSearch, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaEdit, FaTrash, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import ModalNewRecord from './records/ModalNewRecord';
 import ModalEditRecord from './records/ModalEditRecord';
 import PlantLoading from '../components/PlantLoading';
@@ -15,6 +15,7 @@ function Records() {
   const [isLoading, setIsLoading] = useState(false);
   //pagination states
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observerTarget = useRef(null);
@@ -38,8 +39,9 @@ function Records() {
       }
       
       // Check if there are more records
-      const totalPages = response.data.last_page || response.data.meta?.last_page;
-      setHasMore(page < totalPages);
+      const pages = response.data.last_page || response.data.meta?.last_page || 1;
+      setTotalPages(pages);
+      setHasMore(page < pages);
     } catch (error) {
       console.error('Error searching plants:', error);
       toast.error('Error searching records.');
@@ -67,8 +69,9 @@ function Records() {
       }
       
       // Check if there are more records
-      const totalPages = response.data.last_page || response.data.meta?.last_page;
-      setHasMore(page < totalPages);
+      const pages = response.data.last_page || response.data.meta?.last_page || 1;
+      setTotalPages(pages);
+      setHasMore(page < pages);
     } catch (error) {
       console.error('Error loading records:', error);
       toast.error('Error loading records.');
@@ -77,6 +80,18 @@ function Records() {
       setIsLoadingMore(false);
     }
   }
+  
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      if (searchTerm) {
+        handleSearchPlants(searchTerm, newPage, false);
+      } else {
+        handleLoadRecords(newPage, false);
+      }
+    }
+  }
+  
   const handleAddRecord = async (formData) => {
     try {
       setIsLoading(true);
@@ -310,6 +325,44 @@ function Records() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-4 pb-6">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1 || isLoading}
+            className="px-3 py-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+          >
+            <FaChevronLeft size={14} />
+          </button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                disabled={isLoading}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  currentPage === page
+                    ? 'bg-green-600 text-white'
+                    : 'border border-gray-300 hover:bg-gray-50'
+                } disabled:opacity-50 transition-colors`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+          
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages || isLoading}
+            className="px-3 py-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+          >
+            <FaChevronRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Modal */}
       <ModalNewRecord
