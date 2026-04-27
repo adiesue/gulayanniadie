@@ -21,12 +21,62 @@ function Records() {
   const observerTarget = useRef(null);
   const isInInitialMount = useRef(true);
 
-  const handleSearchPlants = async () => {
-    // TODO search from the the backend; in case that all records is not yet loaded
+  const handleSearchPlants = async (searchQuery, page = 1, append = false) => {
+    try {
+      setIsLoading(true);
+      const params = {
+        page,
+        search: searchQuery
+      };
+      
+      const response = await api.get('plants', { params });
+      const newRecords = response.data.data || response.data;
+      
+      if (append) {
+        setRecords(prev => [...prev, ...newRecords]);
+      } else {
+        setRecords(newRecords);
+      }
+      
+      // Check if there are more records
+      const totalPages = response.data.last_page || response.data.meta?.last_page;
+      setHasMore(page < totalPages);
+    } catch (error) {
+      console.error('Error searching plants:', error);
+      toast.error('Error searching records.');
+    } finally {
+      setIsLoading(false);
+    }
   }
   const handleLoadRecords = async (page = 1, append = false) => {
-    //TODO: load the data from the database
-    //TODO: implement paginated data loading
+    try {
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+      
+      const params = { page };
+      
+      const response = await api.get('plants', { params });
+      const newRecords = response.data.data || response.data;
+      
+      if (append) {
+        setRecords(prev => [...prev, ...newRecords]);
+      } else {
+        setRecords(newRecords);
+      }
+      
+      // Check if there are more records
+      const totalPages = response.data.last_page || response.data.meta?.last_page;
+      setHasMore(page < totalPages);
+    } catch (error) {
+      console.error('Error loading records:', error);
+      toast.error('Error loading records.');
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
   }
   const handleAddRecord = async (formData) => {
     try {
@@ -63,16 +113,16 @@ function Records() {
       toast.error("Error encountered while deleting record.");
     }
   }
-  const filteredRecords = records.filter(record =>
-    record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.variety?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.seedling_source?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
   const loadMore = useCallback(() => {
-    if (!isLoadingMore && hasMore && !searchTerm) {
+    if (!isLoadingMore && hasMore) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
-      handleLoadRecords(nextPage, true);
+      
+      if (searchTerm) {
+        handleSearchPlants(searchTerm, nextPage, true);
+      } else {
+        handleLoadRecords(nextPage, true);
+      }
     }
   }, [isLoadingMore, hasMore, currentPage, searchTerm]);
 
@@ -113,6 +163,7 @@ function Records() {
     if (searchTerm) {
       setCurrentPage(1);
       setHasMore(false);
+      handleSearchPlants(searchTerm, 1, false);
     } else {
       setCurrentPage(1);
       setHasMore(true);
@@ -178,7 +229,7 @@ function Records() {
                     </tr>
                   ) : (
                     <>
-                      {filteredRecords.map((record) => (
+                      {records.map((record) => (
                         <tr key={record.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-4 px-6 text-sm text-gray-800 font-medium">{record.name}</td>
                           <td className="py-4 px-6 text-sm text-gray-600">{record?.variety || "-"}</td>
@@ -233,9 +284,9 @@ function Records() {
           </table>
         </div>
 
-        {searchTerm && filteredRecords.length === 0 && (
+        {!isLoading && records.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            No records found matching your search.
+            {searchTerm ? 'No records found matching your search.' : 'No records yet. Add your first record!'}
           </div>
         )}
 
