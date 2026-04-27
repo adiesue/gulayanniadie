@@ -20,8 +20,34 @@ function Records() {
   const observerTarget = useRef(null);
   const isInInitialMount = useRef(true);
 
-  const handleSearchPlants = async () => {
-    // TODO search from the the backend; in case that all records is not yet loaded
+  const handleSearchPlants = async (query = '') => {
+    try {
+      setIsLoading(true);
+      
+      // Make API call to backend with search query
+      const response = await api.get('/plants/search', {
+        params: {
+          q: query || searchTerm,
+          limit: 50 // Fetch more results for search
+        }
+      });
+
+      if (response.data && response.data.data) {
+        setRecords(response.data.data);
+        // No pagination for search results
+        setHasMore(false);
+      } else {
+        setRecords([]);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error searching records:', error);
+      toast.error('Error searching records. Please try again.');
+      setRecords([]);
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+    }
   }
   const handleLoadRecords = async (page = 1, append = false) => {
     try {
@@ -101,11 +127,13 @@ function Records() {
       toast.error("Error encountered while deleting record.");
     }
   }
-  const filteredRecords = records.filter(record =>
-    record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.variety?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.seedling_source?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRecords = searchTerm 
+    ? records // When searching from backend, records are already filtered
+    : records.filter(record =>
+        record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.variety?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.seedling_source?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore && !searchTerm) {
       const nextPage = currentPage + 1;
@@ -149,9 +177,12 @@ function Records() {
       return;
     }
     if (searchTerm) {
+      // Search from backend when search term is entered
       setCurrentPage(1);
       setHasMore(false);
+      handleSearchPlants(searchTerm);
     } else {
+      // Reset to normal pagination when search is cleared
       setCurrentPage(1);
       setHasMore(true);
       handleLoadRecords(1, false);
