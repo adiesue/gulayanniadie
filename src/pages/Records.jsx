@@ -7,7 +7,6 @@ import { api } from '../api';
 import { toast } from 'sonner';
 
 function Records() {
-  //TODO: add loading icon while ongoing ang loading ng records.
   const [records, setRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,8 +24,47 @@ function Records() {
     // TODO search from the the backend; in case that all records is not yet loaded
   }
   const handleLoadRecords = async (page = 1, append = false) => {
-    //TODO: load the data from the database
-    //TODO: implement paginated data loading
+    try {
+      // Set loading state based on whether we're appending or doing initial load
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      // Fetch records from the database
+      const response = await api.get(`/plants?page=${page}&limit=10`);
+      
+      if (response.data && response.data.data) {
+        if (append) {
+          // Append new records to existing ones
+          setRecords(prev => [...prev, ...response.data.data]);
+        } else {
+          // Replace all records
+          setRecords(response.data.data);
+        }
+
+        // Update pagination status
+        if (response.data.data.length < 10) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      } else {
+        setRecords(append ? records : []);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error loading records:", error);
+      toast.error("Error loading records. Please try again.");
+      if (!append) {
+        setRecords([]);
+      }
+    } finally {
+      // Clear loading states
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
   }
   const handleAddRecord = async (formData) => {
     try {
