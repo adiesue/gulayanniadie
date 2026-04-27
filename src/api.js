@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = "http://gulayan-server.test/api";
+const API_BASE_URL = "http://gulayan-server-niadie.test/api";
 
 export const api = axios.create({
    baseURL: API_BASE_URL,
